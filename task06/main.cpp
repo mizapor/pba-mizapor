@@ -47,11 +47,30 @@ void WdWddW_Spring3(
   // write code to correctly compute hessian of a spring.
   // ddw[i_node][j_node] stands for derivative of dw[i_node] w.r.t the end-point's position node2xyz[j_node]
   // the current hessian computed by the code below is not very accurate, so the simulation is unstable.
-  const Eigen::Matrix3d n = stiffness * u01 * u01.transpose();
-  ddw[0][0] = n;
-  ddw[1][1] = n;
-  ddw[0][1] = -n;
-  ddw[1][0] = -n;
+  // const Eigen::Matrix3d n = stiffness * u01 * u01.transpose();
+  const Eigen::Matrix3d I = Eigen::Matrix3d::Identity();
+  const Eigen::Vector3d nodeDiff = (node2xyz[0]-node2xyz[1]);
+  const Eigen::Matrix3d nodeDiffOuterProduct = nodeDiff * nodeDiff.transpose();
+  const Eigen::Matrix3d n = I / length - nodeDiffOuterProduct / (length * length * length);
+
+  const Eigen::Matrix3d dC0OuterProduct = dC[0] * dC[0].transpose();
+  const Eigen::Matrix3d dC1OuterProduct = dC[1] * dC[1].transpose();
+  const Eigen::Matrix3d dC0dC1OuterProduct = dC[0] * dC[1].transpose();
+  const Eigen::Matrix3d dC1dC0OuterProduct = dC[1] * dC[0].transpose();
+
+  const Eigen::Matrix3d Cn = C * n;
+
+  ddw[0][0] = stiffness * (dC0OuterProduct + Cn);
+  ddw[1][1] = stiffness * (dC1OuterProduct + Cn);
+  ddw[0][1] = stiffness * (dC0dC1OuterProduct - Cn);
+  ddw[1][0] = stiffness * (dC1dC0OuterProduct - Cn);
+
+  // THIS CODE IS REALLY WRONG BUT I LIKED THE EFFECT
+  // const Eigen::Matrix3d n = stiffness * (I - u01 * u01.transpose());
+  // ddw[0][0] = n + C / length_ini * u01 * u01.transpose();
+  // ddw[1][1] = n + C / length_ini * u01 * u01.transpose();
+  // ddw[0][1] = -n;
+  // ddw[1][0] = -n;
 }
 
 float step_time_mass_spring_system_with_variational_integration(
